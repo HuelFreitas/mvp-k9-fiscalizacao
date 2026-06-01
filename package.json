@@ -1,0 +1,38 @@
+{
+  "name": "mvp-k9-fiscalizacao",
+  "version": "1.0.0",
+  "description": "MVP de fiscalizacao maritima com frontend e backend Node.js",
+  "main": "assets/app.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview --port 5173",
+    "lint": "eslint . --ext .js",
+    "lint:backend": "eslint backend --ext .js",
+    "format": "prettier --write .",
+    "test": "vitest --config vitest.config.cjs --run",
+    "test:watch": "vitest --config vitest.config.cjs",
+    "test:coverage": "vitest --config vitest.config.cjs --run --coverage",
+    "coverage": "npm run test:coverage && open coverage/index.html",
+    "test:front:back": "npm run test:coverage && cd backend && npm run test:coverage"
+  },
+  "keywords": [],
+  "author": "Hueliton F. Oliveira",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^22.1.0",
+    "prettier": "^3.6.2",
+    "prettier-eslint": "^16.4.2",
+    "vite": "^7.2.2",
+    "vitest": "^1.1.0"
+  },
+  "dependencies": {
+    "jspdf": "^2.5.1"
+  }
+}

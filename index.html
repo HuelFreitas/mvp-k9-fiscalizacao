@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>K9 Fiscalização - Fiscalização Marítima</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__logo" aria-hidden="true">🐾</span>
+        <div>
+          <p class="brand__title">K9 Fiscalização</p>
+          <p class="brand__subtitle">Fiscalização Marítima com Cães</p>
+        </div>
+      </div>
+      <nav class="topbar__actions" aria-label="Ações do sistema">
+        <div id="userInfo" class="user-info" hidden>
+          <div class="user-info__details">
+            <span class="user-info__name" id="userName"></span>
+            <span class="user-info__role" id="userRole"></span>
+          </div>
+          <div class="user-info__avatar" id="userAvatar">👤</div>
+        </div>
+        <button id="logoutButton" class="ghost-button" type="button" hidden>Sair</button>
+      </nav>
+    </header>
+
+    <main id="app" class="app" tabindex="-1"></main>
+
+    <!-- Container de Notificações -->
+    <div id="notificationContainer" class="notification-container" aria-live="polite" aria-label="Notificações do sistema"></div>
+
+    <footer class="footer">
+      <p>&copy; <span id="year"></span> K9 Fiscalização. Todos os direitos reservados.</p>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
