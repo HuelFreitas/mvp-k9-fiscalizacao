@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { MAX_EVIDENCE_COUNT } from '../src/data/constants.js';
 import {
   getEvidenceCount,
@@ -15,15 +15,8 @@ import {
 
 describe('uploadService', () => {
   const uid = (prefix) => `${prefix}-123`;
-  let originalFileReader;
-
-  beforeEach(() => {
-    originalFileReader = global.FileReader;
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
-    global.FileReader = originalFileReader;
   });
 
   it('should count evidence correctly', () => {
@@ -88,30 +81,16 @@ describe('uploadService', () => {
     expect(result.reason).toBe('limit');
   });
 
-  it('should add evidence file and populate data URI', async () => {
-    class MockFileReader {
-      constructor() {
-        this.onload = null;
-      }
-      readAsDataURL() {
-        setTimeout(() => {
-          this.result = 'data:text/plain;base64,SGVsbG8=';
-          this.onload?.({ target: this });
-        }, 0);
-      }
-    }
-
-    global.FileReader = MockFileReader;
-
+  it('should add supported evidence metadata without embedding file data', async () => {
     const req = { evidence: [] };
-    const file = new File(['hello'], 'report.txt', { type: 'text/plain', size: 100 });
+    const file = new File(['hello'], 'report.pdf', { type: 'application/pdf', size: 100 });
 
     const result = await addEvidenceFile(req, file, uid);
 
     expect(result.success).toBe(true);
     expect(result.evidence).toBeDefined();
-    expect(result.evidence.name).toBe('report.txt');
-    expect(result.evidence.data).toBe('data:text/plain;base64,SGVsbG8=');
+    expect(result.evidence.name).toBe('report.pdf');
+    expect(result.evidence.data).toBeNull();
     expect(req.evidence.length).toBe(1);
   });
 

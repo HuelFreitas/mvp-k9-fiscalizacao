@@ -1,5 +1,6 @@
 import { formatFileSize } from '../utils/misc.js';
-import { addEvidenceFile, removeEvidenceFromRequest } from '../services/uploadService.js';
+import { uploadEvidenceFile } from '../services/uploadService.js';
+import { deleteEvidence, getEvidenceDownloadUrl } from '../services/requestsApi.js';
 
 export function createUploadArea(requestId) {
   return `
@@ -8,10 +9,10 @@ export function createUploadArea(requestId) {
       <p>Adicione fotos, documentos ou outros arquivos relevantes para esta inspeção.</p>
       
       <div class="upload-area" id="uploadArea-${requestId}">
-        <input type="file" id="fileInput-${requestId}" multiple accept="image/*,.pdf,.doc,.docx,.txt" />
+        <input type="file" id="fileInput-${requestId}" multiple accept="image/jpeg,image/png,.pdf" />
         <div class="upload-icon">📁</div>
         <p class="upload-text">Clique aqui ou arraste arquivos para adicionar evidências</p>
-        <p class="upload-hint">Formatos aceitos: JPG, PNG, PDF, DOC, TXT (máx. 10MB por arquivo)</p>
+        <p class="upload-hint">Formatos aceitos: JPG, PNG e PDF (máx. 10MB por arquivo)</p>
       </div>
       
       <div class="evidence-gallery" id="evidenceGallery-${requestId}">
@@ -67,7 +68,13 @@ export async function handleFileUpload(files, requestId, helpers) {
   if (!request) return;
 
   for (const file of Array.from(files)) {
-    const result = await addEvidenceFile(request, file, helpers.uid);
+    let result;
+    try {
+      result = await uploadEvidenceFile(request, file, helpers.session?.token);
+    } catch (error) {
+      helpers.showErrorNotification('Erro no upload', error?.message || 'Não foi possível enviar o arquivo.', 5000);
+      continue;
+    }
     if (!result.success) {
       helpers.showErrorNotification('Erro no upload', result.message, 5000);
       if (result.reason === 'limit') {
@@ -76,6 +83,7 @@ export async function handleFileUpload(files, requestId, helpers) {
       continue;
     }
 
+    request.evidence = result.request.evidence || [];
     helpers.saveState();
     const gallery = document.getElementById(`evidenceGallery-${requestId}`);
     renderEvidenceGallery(request.evidence, gallery, requestId, helpers);
@@ -87,17 +95,16 @@ export function renderEvidenceGallery(evidenceList, gallery, requestId, helpers)
   if (!gallery || !evidenceList) return;
   gallery.innerHTML = evidenceList
     .map((evidence) => {
-      const isImage = evidence.type.startsWith('image/');
       const fileSize = formatFileSize(evidence.size);
       return `
         <div class="evidence-item" data-evidence-id="${evidence.id}">
-          ${isImage ? `<img src="${evidence.data}" alt="${helpers.escapeHtml(evidence.name)}" class="evidence-preview">` : `<div class="file-icon">📄</div>`}
+          <div class="file-icon">${evidence.type.startsWith('image/') ? '🖼️' : '📄'}</div>
           <div class="evidence-info">
             <div class="evidence-name">${helpers.escapeHtml(evidence.name)}</div>
             <div>${fileSize} • ${helpers.formatDate(evidence.uploadedAt)}</div>
           </div>
           <div class="evidence-actions">
-            ${isImage ? `<button class="evidence-action" data-action="view" title="Visualizar">👁️</button>` : ''}
+            <button class="evidence-action" data-action="view" title="Abrir arquivo">👁️</button>
             <button class="evidence-action danger" data-action="remove" title="Remover">🗑️</button>
           </div>
         </div>
@@ -106,41 +113,36 @@ export function renderEvidenceGallery(evidenceList, gallery, requestId, helpers)
     .join('');
 }
 
-export function removeEvidence(evidenceId, requestId, helpers) {
+export async function removeEvidence(evidenceId, requestId, helpers) {
   const request = helpers.findRequestById(requestId);
   if (!request || !request.evidence) return;
   const evidence = request.evidence.find((e) => e.id === evidenceId);
   if (!evidence) return;
   if (!helpers.confirm(`Tem certeza que deseja remover a evidência "${evidence.name}"?`)) return;
 
-  const removed = removeEvidenceFromRequest(request, evidenceId);
-  if (!removed) return;
+  try {
+    await deleteEvidence(helpers.session?.token, requestId, evidenceId);
+  } catch (error) {
+    helpers.showErrorNotification('Erro ao remover', error?.message || 'Não foi possível remover a evidência.', 5000);
+    return;
+  }
+  request.evidence = request.evidence.filter((item) => item.id !== evidenceId);
 
   helpers.saveState();
   const gallery = document.getElementById(`evidenceGallery-${requestId}`);
   renderEvidenceGallery(request.evidence, gallery, requestId, helpers);
-  helpers.showWarningNotification('Evidência removida', `O arquivo "${removed.name}" foi removido`, 3000);
+  helpers.showWarningNotification('Evidência removida', `O arquivo "${evidence.name}" foi removido`, 3000);
 }
 
-export function viewEvidence(evidenceId, helpers) {
+export async function viewEvidence(evidenceId, helpers) {
   const request = helpers.findRequestByEvidenceId(evidenceId);
   if (!request) return;
   const evidence = request.evidence.find((e) => e.id === evidenceId);
-  if (!evidence || !evidence.type.startsWith('image/')) return;
-  const modal = document.createElement('dialog');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <div class="modal__header">
-      <h3>${helpers.escapeHtml(evidence.name)}</h3>
-      <button class="notification__close" data-close>×</button>
-    </div>
-    <div class="modal__body">
-      <img src="${evidence.data}" alt="${helpers.escapeHtml(evidence.name)}" style="width: 100%; max-height: 70vh; object-fit: contain;">
-      <p style="margin-top: 1rem; color: var(--text-secondary);">Tamanho: ${formatFileSize(evidence.size)} • Adicionado em: ${helpers.formatDate(evidence.uploadedAt)}</p>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.showModal();
-  modal.querySelector('[data-close]')?.addEventListener('click', () => modal.close());
-  modal.addEventListener('close', () => modal.remove());
+  if (!evidence) return;
+  try {
+    const { downloadUrl } = await getEvidenceDownloadUrl(helpers.session?.token, request.id, evidenceId);
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+  } catch (error) {
+    helpers.showErrorNotification('Erro ao abrir arquivo', error?.message || 'Não foi possível gerar o link de acesso.', 5000);
+  }
 }

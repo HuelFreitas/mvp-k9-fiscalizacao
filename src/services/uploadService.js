@@ -1,24 +1,13 @@
 import { MAX_EVIDENCE_COUNT } from '../data/constants.js';
+import { confirmEvidenceUpload, requestEvidenceUpload, uploadEvidenceToStorage } from './requestsApi.js';
 
 const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',
   'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => resolve(event.target.result);
-    reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
-    reader.readAsDataURL(file);
-  });
-}
 
 export function getEvidenceCount(request) {
   return Array.isArray(request.evidence) ? request.evidence.length : 0;
@@ -71,9 +60,17 @@ export async function addEvidenceFile(request, file, uid) {
   }
 
   const evidence = createEvidenceEntry(file, uid);
-  evidence.data = await readFileAsDataURL(file);
   request.evidence.push(evidence);
   return { success: true, evidence };
+}
+
+export async function uploadEvidenceFile(request, file, token) {
+  if (!canAddEvidence(request)) return { success: false, reason: 'limit', message: `Cada solicitação suporta no máximo ${MAX_EVIDENCE_COUNT} evidências.` };
+  if (file.size > MAX_FILE_SIZE) return { success: false, reason: 'size', message: `O arquivo "${file.name}" excede o limite de 10MB` };
+  if (!isAllowedEvidenceType(file.type)) return { success: false, reason: 'type', message: `O arquivo "${file.name}" não é um tipo suportado` };
+  const { upload } = await requestEvidenceUpload(token, request.id, file);
+  await uploadEvidenceToStorage(upload.uploadUrl, file);
+  return { success: true, ...(await confirmEvidenceUpload(token, request.id, upload)) };
 }
 
 export function removeEvidenceFromRequest(request, evidenceId) {

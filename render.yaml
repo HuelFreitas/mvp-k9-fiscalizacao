@@ -23,6 +23,14 @@ services:
         value: "false"
       - key: DB_POOL_SIZE
         value: "5"
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
 
   - type: web
     runtime: static

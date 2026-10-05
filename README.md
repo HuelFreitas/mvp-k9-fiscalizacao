@@ -180,6 +180,7 @@ Configurado para rodar **automaticamente em cada pull request**:
 - Elementos com suporte a teclado, mensagens de feedback em região `aria-live` e foco gerenciado.
 - Conjunto inicial de dados demonstrativos para acelerar a avaliação.
 - Backend Express para autenticação e CRUD principal de solicitações.
+- Evidências privadas em Cloudflare R2, com URLs temporárias de upload e download.
 
 ## Estrutura do projeto
 
@@ -267,6 +268,8 @@ A API também disponibiliza `GET /api/health`, limita requisições de autentica
 
 Para publicar gratuitamente o frontend, a API e o PostgreSQL, siga o guia [Render + Neon](./docs/deploy-render-neon.md). O arquivo `render.yaml` descreve os dois serviços do Render, e as migrations em `backend/migrations/` preparam o banco automaticamente.
 
+Para habilitar fotos e laudos persistentes, siga o guia de [armazenamento de evidências no Cloudflare R2](./docs/storage-r2.md).
+
 ### Usuários demo
 
 - Cliente: `marina@portosafemar.com`
@@ -277,7 +280,7 @@ Para publicar gratuitamente o frontend, a API e o PostgreSQL, siga o guia [Rende
 
 - Adicionar assinatura digital aos relatórios exportados.
 - Implementar fluxo de notificações por e-mail ou push.
-- Armazenar evidências em Cloudflare R2 ou Supabase Storage.
+- Adicionar antivírus e geração de miniaturas ao fluxo de evidências.
 - Aumentar cobertura dos componentes com menor cobertura (`dashboards`, `modal`, `search`, `client`).
 
 ## 🤝 Contribuindo

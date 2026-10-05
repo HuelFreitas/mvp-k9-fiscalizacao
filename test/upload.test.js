@@ -3,6 +3,22 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../src/services/requestsApi.js', () => ({
+  requestEvidenceUpload: vi.fn(),
+  uploadEvidenceToStorage: vi.fn(),
+  confirmEvidenceUpload: vi.fn(),
+  deleteEvidence: vi.fn(),
+  getEvidenceDownloadUrl: vi.fn(),
+}));
+
+import {
+  requestEvidenceUpload,
+  uploadEvidenceToStorage,
+  confirmEvidenceUpload,
+  deleteEvidence,
+  getEvidenceDownloadUrl,
+} from '../src/services/requestsApi.js';
 import {
   createUploadArea,
   handleFileUpload,
@@ -28,6 +44,7 @@ describe('upload component', () => {
       escapeHtml: (s) => s,
       formatDate: (d) => String(d),
       confirm: () => true,
+      session: { token: 'jwt' },
     };
   });
 
@@ -59,23 +76,11 @@ describe('upload component', () => {
     const req = { id: 'req-2', evidence: [] };
     helpers.findRequestById = () => req;
 
-    // Mock FileReader to simulate async load
-    class MockReader {
-      constructor() {
-        this.onload = null;
-      }
-      readAsDataURL() {
-        // simulate async
-        setTimeout(() => {
-          this.result = 'data:image/png;base64,AAA';
-          this.onload && this.onload({ target: { result: this.result } });
-        }, 0);
-      }
-    }
-
-    vi.stubGlobal('FileReader', MockReader);
-
     const file = new File(['data'], 'pic.png', { type: 'image/png', size: 1024 });
+    const evidence = { id: 'e-1', name: file.name, size: file.size, type: file.type, uploadedAt: new Date().toISOString() };
+    requestEvidenceUpload.mockResolvedValue({ upload: { ...evidence, key: 'requests/req-2/e-1.png', uploadUrl: 'https://upload.example' } });
+    uploadEvidenceToStorage.mockResolvedValue();
+    confirmEvidenceUpload.mockResolvedValue({ request: { ...req, evidence: [evidence] }, evidence });
 
     // ensure gallery element exists for the call inside the reader
     const gallery = document.createElement('div');
@@ -83,9 +88,6 @@ describe('upload component', () => {
     document.body.appendChild(gallery);
 
     await handleFileUpload([file], 'req-2', helpers);
-
-    // wait a tick for setTimeout in mock
-    await new Promise((r) => setTimeout(r, 20));
 
     expect(req.evidence.length).toBe(1);
     expect(req.evidence[0].name).toBe('pic.png');
@@ -109,7 +111,7 @@ describe('upload component', () => {
     expect(gallery.querySelectorAll('[data-action="remove"]').length).toBe(2);
   });
 
-  it('removeEvidence removes item after confirm', () => {
+  it('removeEvidence removes item after confirm', async () => {
     const req = { id: 'req-3', evidence: [{ id: 'e-10', name: 'f.txt' }] };
     helpers.findRequestById = () => req;
     // create gallery element
@@ -117,31 +119,20 @@ describe('upload component', () => {
     gallery.id = 'evidenceGallery-req-3';
     document.body.appendChild(gallery);
 
-    removeEvidence('e-10', 'req-3', helpers);
+    deleteEvidence.mockResolvedValue();
+    await removeEvidence('e-10', 'req-3', helpers);
     expect(req.evidence.length).toBe(0);
     expect(helpers.saveState).toHaveBeenCalled();
   });
 
-  it('viewEvidence opens a dialog for image evidence', () => {
+  it('viewEvidence opens a private download URL', async () => {
     const evidence = { id: 'e-20', name: 'img.png', type: 'image/png', size: 100, uploadedAt: new Date().toISOString(), data: 'data:image/png;base64,AAA' };
     const req = { id: 'req-4', evidence: [evidence] };
     helpers.findRequestByEvidenceId = () => req;
 
-    // jsdom doesn't implement dialog.showModal; stub it for the test
-    if (!HTMLDialogElement.prototype.showModal) {
-      HTMLDialogElement.prototype.showModal = function () {
-        this._shown = true;
-      };
-      HTMLDialogElement.prototype.close = function () {
-        this._closed = true;
-        this.dispatchEvent(new Event('close'));
-      };
-    }
-
-    viewEvidence('e-20', helpers);
-    const dialog = document.body.querySelector('dialog.modal');
-    expect(dialog).toBeTruthy();
-    // cleanup
-    dialog?.remove();
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    getEvidenceDownloadUrl.mockResolvedValue({ downloadUrl: 'https://download.example' });
+    await viewEvidence('e-20', helpers);
+    expect(open).toHaveBeenCalledWith('https://download.example', '_blank', 'noopener,noreferrer');
   });
 });

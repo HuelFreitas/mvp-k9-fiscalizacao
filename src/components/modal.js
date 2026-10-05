@@ -5,7 +5,7 @@
  */
 
 import { escapeHtml } from '../utils/string.js';
-import { formatDate, uid } from '../utils/misc.js';
+import { formatDate } from '../utils/misc.js';
 import { companyAvailability } from '../data/constants.js';
 import { timelineItem } from './timeline.js';
 import { buildStatusChip } from './ui.js';
@@ -161,11 +161,11 @@ export function showRequestModal(request, viewer, { state, resolveUser, saveStat
     showErrorNotification,
     showSuccessNotification,
     showWarningNotification,
-    uid,
     saveState,
     escapeHtml,
     formatDate,
     confirm: (msg) => confirm(msg),
+    session,
   };
   initializeUploadArea(request.id, request, uploadHelpers);
 }

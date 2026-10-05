@@ -13,12 +13,20 @@ import {
   listRequestRecords,
   saveRequest,
 } from '../db/repository.js';
+import {
+  MAX_EVIDENCE_COUNT,
+  createEvidenceDownloadUrl,
+  createEvidenceUpload,
+  deleteEvidenceObject,
+  validateEvidenceFile,
+  verifyEvidenceObject,
+} from '../services/objectStorage.js';
 
 function isClient(user) {
   return user?.role === 'client';
 }
 
-function canAccessRequest(user, requestItem) {
+export function canAccessRequest(user, requestItem) {
   if (!requestItem) return false;
   if (!user) return false;
   if (user.role === 'admin') return true;
@@ -27,6 +35,70 @@ function canAccessRequest(user, requestItem) {
   }
   if (isClient(user)) return requestItem.clientId === user.id;
   return false;
+}
+
+async function accessibleRequest(req, res) {
+  const item = await findRequestById(req.params.id);
+  if (!item || !canAccessRequest(req.user, item)) {
+    res.status(404).json({ error: { code: 'NOT_FOUND' } });
+    return null;
+  }
+  return item;
+}
+
+export async function createEvidenceUploadHandler(req, res) {
+  const item = await accessibleRequest(req, res);
+  if (!item) return;
+  if ((item.evidence?.length || 0) >= MAX_EVIDENCE_COUNT) {
+    return res.status(409).json({ error: { code: 'EVIDENCE_LIMIT', message: 'Limite de 10 evidências atingido' } });
+  }
+  const error = validateEvidenceFile(req.body || {});
+  if (error) return res.status(422).json({ error: { code: 'INVALID_FILE', message: error } });
+  const upload = await createEvidenceUpload({ requestId: item.id, ...req.body });
+  return res.json({ upload });
+}
+
+export async function confirmEvidenceUploadHandler(req, res) {
+  const item = await accessibleRequest(req, res);
+  if (!item) return;
+  const { id, key, name, size, type } = req.body || {};
+  const error = validateEvidenceFile({ name, size, type });
+  const expectedPrefix = `requests/${item.id}/${id}`;
+  if (error || !id || !key?.startsWith(expectedPrefix)) {
+    return res.status(422).json({ error: { code: 'INVALID_FILE', message: error || 'Identificador de arquivo inválido' } });
+  }
+  if ((item.evidence?.length || 0) >= MAX_EVIDENCE_COUNT) {
+    return res.status(409).json({ error: { code: 'EVIDENCE_LIMIT', message: 'Limite de 10 evidências atingido' } });
+  }
+  if (!(await verifyEvidenceObject({ key, size, type }))) {
+    return res.status(422).json({ error: { code: 'UPLOAD_MISMATCH', message: 'O arquivo enviado não corresponde aos metadados informados' } });
+  }
+  const evidence = { id, key, name, size, type, uploadedAt: new Date().toISOString(), uploadedBy: req.user.id };
+  item.evidence = Array.isArray(item.evidence) ? item.evidence : [];
+  item.evidence.push(evidence);
+  item.updatedAt = new Date().toISOString();
+  return res.status(201).json({ evidence, request: await saveRequest(item) });
+}
+
+export async function downloadEvidenceHandler(req, res) {
+  const item = await accessibleRequest(req, res);
+  if (!item) return;
+  const evidence = item.evidence?.find((entry) => entry.id === req.params.evidenceId);
+  if (!evidence) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
+  const downloadUrl = await createEvidenceDownloadUrl(evidence.key);
+  return res.json({ downloadUrl, expiresIn: 300 });
+}
+
+export async function deleteEvidenceHandler(req, res) {
+  const item = await accessibleRequest(req, res);
+  if (!item) return;
+  const index = item.evidence?.findIndex((entry) => entry.id === req.params.evidenceId) ?? -1;
+  if (index < 0) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
+  const [evidence] = item.evidence.splice(index, 1);
+  await deleteEvidenceObject(evidence.key);
+  item.updatedAt = new Date().toISOString();
+  await saveRequest(item);
+  return res.status(204).send();
 }
 
 export async function listRequestsHandler(req, res) {
