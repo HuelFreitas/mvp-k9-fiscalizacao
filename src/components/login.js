@@ -118,12 +118,6 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
       return;
     }
 
-    if (existingUser && role && existingUser.role !== role) {
-      feedbackLabel.textContent = "Este e-mail já está associado a um perfil diferente.";
-      feedbackLabel.dataset.type = "error";
-      return;
-    }
-
     try {
       submitBtn.disabled = true;
       const authResponse = existingUser

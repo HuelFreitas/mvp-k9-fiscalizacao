@@ -70,6 +70,25 @@ describe('login component', () => {
     expect(ctx.onLogin).toHaveBeenCalledWith('u1', 'jwt');
   });
 
+  it('faz login de operador existente sem confundir com cadastro de cliente', async () => {
+    const operator = { id: 'operator-1', email: 'operador@corp.com', name: 'Carlos', role: 'operator' };
+    ctx.state.users.push(operator);
+    findUserByEmail.mockReturnValue(operator);
+    loginWithPassword.mockResolvedValue({ user: operator, token: 'operator-jwt' });
+
+    renderLogin(app, ctx);
+    document.querySelector('#loginEmail').value = operator.email;
+    document.querySelector('#loginPassword').value = '123456';
+
+    document.querySelector('#loginForm').dispatchEvent(new Event('submit'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(loginWithPassword).toHaveBeenCalledWith({ email: operator.email, password: '123456' });
+    expect(registerWithPassword).not.toHaveBeenCalled();
+    expect(ctx.onLogin).toHaveBeenCalledWith(operator.id, 'operator-jwt');
+    expect(document.querySelector('#loginFeedback').textContent).toBe('');
+  });
+
   it('faz registro de novo usuário', async () => {
     findUserByEmail.mockReturnValue(null);
     registerWithPassword.mockResolvedValue({ user: { id: 'u2', name: 'Novo', role: 'client' }, token: 'jwt2' });
