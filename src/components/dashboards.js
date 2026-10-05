@@ -127,18 +127,19 @@ export function renderClientDashboard({
       <div class="card__header">
         <h2 id="create-request-heading">Nova solicitação</h2>
         <p>Informe os dados da operação desejada. Você poderá anexar documentos na etapa de auditoria.</p>
+        <p id="request-required-hint" class="required-fields-hint"><span class="required-marker" aria-hidden="true">*</span> Campos obrigatórios</p>
       </div>
-      <form id="requestForm" class="grid-two" novalidate>
+      <form id="requestForm" class="grid-two" aria-describedby="request-required-hint" novalidate>
         <div>
-          <label for="requestTitle">Título da solicitação</label>
+          <label for="requestTitle">Título da solicitação <span class="required-marker" aria-hidden="true">*</span></label>
           <input id="requestTitle" name="title" required placeholder="Ex.: Varredura em navio cargueiro" />
         </div>
         <div>
-          <label for="requestPort">Porto / Terminal</label>
+          <label for="requestPort">Porto / Terminal <span class="required-marker" aria-hidden="true">*</span></label>
           <input id="requestPort" name="port" required placeholder="Informe o porto ou terminal" />
         </div>
         <div>
-          <label for="requestVessel">Embarcação</label>
+          <label for="requestVessel">Embarcação <span class="required-marker" aria-hidden="true">*</span></label>
           <input id="requestVessel" name="vessel" required placeholder="Nome ou registro da embarcação" />
         </div>
         <div>
@@ -146,11 +147,11 @@ export function renderClientDashboard({
           <input id="requestCargo" name="cargo" placeholder="Ex.: Contêineres, combustíveis, graneis" />
         </div>
         <div>
-          <label for="requestDate">Data prevista</label>
+          <label for="requestDate">Data prevista <span class="required-marker" aria-hidden="true">*</span></label>
           <input id="requestDate" name="scheduledFor" type="date" required min="${new Date().toISOString().split('T')[0]}" />
         </div>
         <div>
-          <label for="requestTime">Horário disponível</label>
+          <label for="requestTime">Horário disponível <span class="required-marker" aria-hidden="true">*</span></label>
           <select id="requestTime" name="scheduledTime" required>
             <option value="">Selecione um horário</option>
             ${companyAvailability
@@ -163,7 +164,7 @@ export function renderClientDashboard({
           <input id="requestTags" name="tags" placeholder="auditoria, alto risco" />
         </div>
         <div class="full-row">
-          <label for="requestDescription">Contexto e observações</label>
+          <label for="requestDescription">Contexto e observações <span class="required-marker" aria-hidden="true">*</span></label>
           <textarea id="requestDescription" name="description" required placeholder="Descreva o objetivo, restrições e equipes de apoio."></textarea>
         </div>
         <div class="full-row">

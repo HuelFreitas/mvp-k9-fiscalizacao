@@ -6,12 +6,23 @@ import { createRequest } from '../services/requestsApi.js';
 export async function handleCreateRequest(event, user, { state, saveState, rerender, session }) {
   event.preventDefault();
   const form = event.currentTarget;
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    form.querySelector(':invalid')?.focus();
+    const message = 'Preencha os campos obrigatórios destacados antes de enviar.';
+    announce(message);
+    showErrorNotification('Formulário incompleto', message, 5000);
+    return;
+  }
+
   const data = new FormData(form);
   const request = buildRequestPayload(data, user);
   const validation = validateRequestPayload(request);
 
   if (!validation.valid) {
     announce(validation.message);
+    showErrorNotification('Formulário incompleto', validation.message, 5000);
     return;
   }
 

@@ -286,6 +286,15 @@ label {
   margin-bottom: 0.4rem;
 }
 
+.required-fields-hint {
+  font-size: 0.875rem;
+}
+
+.required-marker {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 input,
 select,
 textarea {

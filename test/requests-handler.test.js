@@ -49,6 +49,26 @@ describe('handlers/requests', () => {
     await handleCreateRequest(event, { id: 'c1' }, { state: { requests: [] }, saveState: vi.fn(), rerender: vi.fn(), session: { token: 't' } });
 
     expect(announce).toHaveBeenCalledWith('inválido');
+    expect(showErrorNotification).toHaveBeenCalledWith('Formulário incompleto', 'inválido', 5000);
+    expect(createRequest).not.toHaveBeenCalled();
+  });
+
+  it('mostra os campos obrigatórios ausentes antes de montar a solicitação', async () => {
+    const event = createEvent();
+    const invalidInput = document.createElement('input');
+    invalidInput.required = true;
+    event.currentTarget.appendChild(invalidInput);
+    event.currentTarget.reportValidity = vi.fn();
+    await handleCreateRequest(event, { id: 'c1' }, { state: { requests: [] }, saveState: vi.fn(), rerender: vi.fn(), session: { token: 't' } });
+
+    expect(event.currentTarget.reportValidity).toHaveBeenCalled();
+    expect(event._focus).toHaveBeenCalled();
+    expect(showErrorNotification).toHaveBeenCalledWith(
+      'Formulário incompleto',
+      expect.stringContaining('campos obrigatórios'),
+      5000,
+    );
+    expect(buildRequestPayload).not.toHaveBeenCalled();
     expect(createRequest).not.toHaveBeenCalled();
   });
 
