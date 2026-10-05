@@ -7,6 +7,38 @@ Protótipo responsivo para gestão de operações de fiscalização marítima co
 
 > ⚠️ O projeto possui frontend Vite e API Node.js/Express. Em produção, usuários e solicitações são persistidos em PostgreSQL; apenas o token da sessão permanece no `localStorage`.
 
+## Aplicação em produção
+
+- **Portal:** [mvp-k9-fiscalizacao-web.onrender.com](https://mvp-k9-fiscalizacao-web.onrender.com)
+- **Base da API:** `https://mvp-k9-fiscalizacao-api.onrender.com/api`
+- **Health check:** [GET /api/health](https://mvp-k9-fiscalizacao-api.onrender.com/api/health)
+- **Banco de dados:** PostgreSQL serverless no Neon
+
+A API utiliza uma instância gratuita do Render e pode levar cerca de 50 segundos para responder ao primeiro acesso após um período de inatividade.
+
+### Acesso de demonstração
+
+| Perfil | E-mail |
+|---|---|
+| Cliente | `marina@portosafemar.com` |
+| Operador | `carlos.silva@guardcan.com` |
+
+A senha de produção é definida exclusivamente na variável protegida `DEMO_DEFAULT_PASSWORD` do Render. Ela não é armazenada no repositório; solicite-a ao responsável pela demonstração.
+
+Consulte o [roteiro de demonstração](./docs/demo.md) para apresentar o fluxo completo do MVP.
+
+## Arquitetura publicada
+
+```text
+Navegador
+   │
+   ├── Frontend Vite ── Render Static Site
+   │                         │
+   └─────────────────────────┼── HTTPS/JSON ── API Express no Render
+                                                     │
+                                                     └── PostgreSQL no Neon
+```
+
 ## Pré-requisitos
 
 - [Node.js](https://nodejs.org/) >= 18
@@ -64,7 +96,7 @@ npm run coverage
 
 ### Métricas atuais
 
-- **191 testes de frontend** e **37 testes de backend** passando (100%) ✅
+- **194 testes de frontend** e **37 testes de backend** passando ✅
 - **Thresholds configurados (frontend):** 70% statements/lines/functions e 65% branches (aplicados a `src/**/*.js`)
 - **Threshold backend:** execução com cobertura habilitada em `backend` para monitoramento contínuo
 
@@ -80,7 +112,7 @@ test/
 ├── storage.test.js       (26 testes) ✅
 ├── notifications.test.js (22 testes) ✅
 ├── search.test.js        (9 testes)  ✅
-├── dashboards.test.js    (6 testes)  ✅
+├── dashboards.test.js    (7 testes)  ✅
 ├── actions.test.js       (4 testes)  ✅
 └── ...outros             (~29 testes)✅
 ```
@@ -196,7 +228,7 @@ Configurado para rodar **automaticamente em cada pull request**:
 │       ├── storage.js       # Leitura/escrita no localStorage
 │       ├── string.js        # Sanitização e trim seguro
 │       └── validators.js    # Validações de data e formulário
-├── test/                   # 191 testes unitários de frontend (Vitest + jsdom)
+├── test/                   # Testes unitários de frontend (Vitest + jsdom)
 ├── index.html              # Shell da aplicação
 └── vite.config.js          # Configuração do bundler
 ```
@@ -239,7 +271,7 @@ Para publicar gratuitamente o frontend, a API e o PostgreSQL, siga o guia [Rende
 
 - Cliente: `marina@portosafemar.com`
 - Operador: `carlos.silva@guardcan.com`
-- Senha local padrão: `123456`. No deploy, use a senha forte definida em `DEMO_DEFAULT_PASSWORD`.
+- Senha local padrão: `123456`. Em produção, a senha é definida no Render por `DEMO_DEFAULT_PASSWORD` e nunca deve ser publicada no repositório.
 
 ## Próximos passos sugeridos
 
