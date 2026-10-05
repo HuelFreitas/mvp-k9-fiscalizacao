@@ -14,6 +14,7 @@ export function createUploadArea(requestId) {
         <p class="upload-text">Clique aqui ou arraste arquivos para adicionar evidências</p>
         <p class="upload-hint">Formatos aceitos: JPG, PNG e PDF (máx. 10MB por arquivo)</p>
       </div>
+      <p class="feedback" id="uploadStatus-${requestId}" role="status" aria-live="polite"></p>
       
       <div class="evidence-gallery" id="evidenceGallery-${requestId}">
         <!-- Evidências serão inseridas aqui -->
@@ -39,17 +40,26 @@ export function initializeUploadArea(requestId, request, helpers) {
 
   uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
 
-  uploadArea.addEventListener('drop', (e) => {
+  uploadArea.addEventListener('drop', async (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-    handleFileUpload(e.dataTransfer.files, requestId, helpers);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length) await handleFileUpload(files, requestId, helpers);
   });
 
-  uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('click', (event) => {
+    if (event.target === fileInput) return;
+    fileInput.click();
+  });
 
-  fileInput.addEventListener('change', (e) => {
-    handleFileUpload(e.target.files, requestId, helpers);
-    fileInput.value = '';
+  fileInput.addEventListener('change', async () => {
+    const files = Array.from(fileInput.files || []);
+    if (!files.length) return;
+    try {
+      await handleFileUpload(files, requestId, helpers);
+    } finally {
+      fileInput.value = '';
+    }
   });
 
   // delegate gallery actions
@@ -66,16 +76,30 @@ export function initializeUploadArea(requestId, request, helpers) {
 export async function handleFileUpload(files, requestId, helpers) {
   const request = helpers.findRequestById(requestId);
   if (!request) return;
+  const status = document.getElementById(`uploadStatus-${requestId}`);
 
   for (const file of Array.from(files)) {
+    if (status) {
+      status.dataset.type = 'info';
+      status.textContent = `Enviando "${file.name}"...`;
+    }
     let result;
     try {
       result = await uploadEvidenceFile(request, file, helpers.session?.token);
     } catch (error) {
-      helpers.showErrorNotification('Erro no upload', error?.message || 'Não foi possível enviar o arquivo.', 5000);
+      const message = error?.message || 'Não foi possível enviar o arquivo.';
+      if (status) {
+        status.dataset.type = 'error';
+        status.textContent = message;
+      }
+      helpers.showErrorNotification('Erro no upload', message, 5000);
       continue;
     }
     if (!result.success) {
+      if (status) {
+        status.dataset.type = 'error';
+        status.textContent = result.message;
+      }
       helpers.showErrorNotification('Erro no upload', result.message, 5000);
       if (result.reason === 'limit') {
         helpers.showWarningNotification('Limite de evidências atingido', result.message, 5000);
@@ -87,6 +111,10 @@ export async function handleFileUpload(files, requestId, helpers) {
     helpers.saveState();
     const gallery = document.getElementById(`evidenceGallery-${requestId}`);
     renderEvidenceGallery(request.evidence, gallery, requestId, helpers);
+    if (status) {
+      status.dataset.type = 'success';
+      status.textContent = `Arquivo "${file.name}" adicionado com sucesso.`;
+    }
     helpers.showSuccessNotification('Evidência adicionada', `Arquivo "${file.name}" foi adicionado com sucesso`, 3000);
   }
 }

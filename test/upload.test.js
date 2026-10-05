@@ -58,6 +58,27 @@ describe('upload component', () => {
     expect(html).toContain('fileInput-req-1');
     expect(html).toContain('evidenceGallery-req-1');
     expect(html).toContain('upload-area');
+    expect(html).toContain('uploadStatus-req-1');
+  });
+
+  it('initializeUploadArea envia a cópia dos arquivos selecionados no Safari', async () => {
+    const { initializeUploadArea } = await import('../src/components/upload.js');
+    const req = { id: 'req-safari', evidence: [] };
+    helpers.findRequestById = () => req;
+    document.body.innerHTML = createUploadArea(req.id);
+    const file = new File(['pdf'], 'laudo.pdf', { type: 'application/pdf' });
+    const input = document.getElementById(`fileInput-${req.id}`);
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+    requestEvidenceUpload.mockResolvedValue({ upload: { id: 'e-1', key: 'requests/req-safari/e-1.pdf', name: file.name, size: file.size, type: file.type, uploadUrl: 'https://upload.example' } });
+    uploadEvidenceToStorage.mockResolvedValue();
+    confirmEvidenceUpload.mockResolvedValue({ request: { ...req, evidence: [{ id: 'e-1', name: file.name, size: file.size, type: file.type }] } });
+
+    initializeUploadArea(req.id, req, helpers);
+    input.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(requestEvidenceUpload).toHaveBeenCalled();
+    expect(document.getElementById(`uploadStatus-${req.id}`).textContent).toContain('sucesso');
   });
 
   it('handleFileUpload rejects unsupported file types', async () => {
