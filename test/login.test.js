@@ -40,13 +40,12 @@ describe('login component', () => {
     expect(document.querySelector('#loginNewUserFields').hidden).toBe(true);
   });
 
-  it('alterna campos por perfil', () => {
+  it('limita novos cadastros ao perfil de cliente', () => {
     renderLogin(app, ctx);
     const role = document.querySelector('#loginRole');
-    role.value = 'operator';
-    role.dispatchEvent(new Event('change'));
-    expect(document.querySelector('#companyField').hidden).toBe(true);
-    expect(document.querySelector('#certificationField').hidden).toBe(false);
+    expect(role.type).toBe('hidden');
+    expect(role.value).toBe('client');
+    expect(document.querySelector('#companyField').hidden).toBe(false);
   });
 
   it('valida campos obrigatórios no submit', async () => {

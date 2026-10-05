@@ -67,7 +67,7 @@ describe('handlers/requests', () => {
     const event = createEvent();
     const request = {
       title: 'Inspeção', port: 'Santos', vessel: 'A', cargo: 'Carga', description: 'Desc',
-      tags: ['x'], scheduledFor: '2026-06-10T08:30:00',
+      tags: ['x'], scheduledFor: '2099-06-10T08:30:00',
     };
     buildRequestPayload.mockReturnValue(request);
     validateRequestPayload.mockReturnValue({ valid: true });
@@ -81,7 +81,7 @@ describe('handlers/requests', () => {
 
     expect(createRequest).toHaveBeenCalledWith('jwt', expect.objectContaining({
       title: 'Inspeção',
-      scheduledFor: '2026-06-10',
+      scheduledFor: '2099-06-10',
       scheduledTime: '08:30',
     }));
     expect(state.requests).toHaveLength(1);

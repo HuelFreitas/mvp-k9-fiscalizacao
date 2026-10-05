@@ -11,12 +11,13 @@ import {
 } from '../controllers/requestsController.js';
 import { initAppState } from '../initState.js';
 import { ensureAuth, ensureRole } from '../middleware/authMiddleware.js';
+import { hasDatabase } from '../db/pool.js';
 
 const router = express.Router();
 
-// ensure in-memory state initialized
+// Inicializa o modo demonstrativo quando não há PostgreSQL configurado.
 router.use((req, res, next) => {
-  if (!global.appState) initAppState();
+  if (!hasDatabase() && !global.appState) initAppState();
   next();
 });
 

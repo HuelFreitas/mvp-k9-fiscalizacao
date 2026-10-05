@@ -9,7 +9,7 @@ export async function loginHandler(req, res) {
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
   const { email, password } = parsed.data;
 
-  const user = findUserByEmail(email, global.appState);
+  const user = await findUserByEmail(email);
   if (!user) return res.status(404).json({ error: { code: 'USER_NOT_FOUND' } });
 
   const allowDevPasswordless =
@@ -40,11 +40,19 @@ export async function registerHandler(req, res) {
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
   const { email, name, role, company, certification, password } = parsed.data;
 
-  const existing = findUserByEmail(email, global.appState);
+  const existing = await findUserByEmail(email);
   if (existing) return res.status(409).json({ error: { code: 'EMAIL_IN_USE' } });
 
-  const user = createUser({ email, name, role, company, certification }, global.appState);
-  user.passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
+  let user;
+  try {
+    user = await createUser({ email, name, role, company, certification, passwordHash });
+  } catch (error) {
+    if (error?.code === '23505') {
+      return res.status(409).json({ error: { code: 'EMAIL_IN_USE' } });
+    }
+    throw error;
+  }
 
   const safeUser = { ...user };
   delete safeUser.passwordHash;

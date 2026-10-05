@@ -1,11 +1,12 @@
 import { safeTrim, uid } from './utils.js';
+import { findUserByEmailRecord, insertUser } from '../db/repository.js';
 
-export function findUserByEmail(email, state) {
-  if (!email || !state?.users) return null;
-  return state.users.find((user) => user.email === String(email).toLowerCase()) || null;
+export async function findUserByEmail(email) {
+  if (!email) return null;
+  return findUserByEmailRecord(email);
 }
 
-export function createUser({ email, name, role, company, certification }, state) {
+export async function createUser({ email, name, role, company, certification, passwordHash }) {
   const normalizedEmail = safeTrim(email).toLowerCase();
   const normalizedName = safeTrim(name);
 
@@ -14,6 +15,7 @@ export function createUser({ email, name, role, company, certification }, state)
     role,
     name: normalizedName,
     email: normalizedEmail,
+    passwordHash,
   };
 
   if (role === 'client') {
@@ -22,6 +24,5 @@ export function createUser({ email, name, role, company, certification }, state)
     user.certification = safeTrim(certification) || 'Certificação pendente';
   }
 
-  state.users.push(user);
-  return user;
+  return insertUser(user);
 }

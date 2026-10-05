@@ -33,6 +33,6 @@
     "vitest": "^1.1.0"
   },
   "dependencies": {
-    "jspdf": "^2.5.1"
+    "jspdf": "^4.2.1"
   }
 }

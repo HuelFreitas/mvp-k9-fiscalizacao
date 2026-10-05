@@ -32,22 +32,12 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
               <label for="loginName">Nome completo*</label>
               <input id="loginName" name="name" autocomplete="name" required placeholder="Ex.: Ana Costa" />
             </div>
-            <div>
-              <label for="loginRole">Perfil de acesso*</label>
-              <select id="loginRole" name="role" required>
-                <option value="" disabled selected>Selecione</option>
-                <option value="client">Cliente - Solicitar inspeções</option>
-                <option value="operator">Operador - Executar inspeções</option>
-              </select>
-            </div>
+            <input id="loginRole" name="role" type="hidden" value="client" />
             <div id="companyField" class="conditional-field">
               <label for="loginCompany">Empresa / Órgão*</label>
               <input id="loginCompany" name="company" placeholder="Informe a empresa ou órgão" />
             </div>
-            <div id="certificationField" class="conditional-field" hidden>
-              <label for="loginCertification">Certificação K9*</label>
-              <input id="loginCertification" name="certification" placeholder="Ex.: Condutor Nível II" />
-            </div>
+            <p class="feedback">Novos acessos são cadastrados como cliente. Operadores são provisionados pela administração.</p>
           </div>
           <p id="loginFeedback" role="status" aria-live="polite" class="feedback"></p>
           <button id="loginSubmitBtn" class="primary-button" type="submit">Entrar no sistema</button>
@@ -71,9 +61,6 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
     </section>
   `;
 
-  const roleSelect = document.querySelector("#loginRole");
-  const companyField = document.querySelector("#companyField");
-  const certificationField = document.querySelector("#certificationField");
   const feedbackLabel = document.querySelector("#loginFeedback");
   const emailInput = document.querySelector("#loginEmail");
   const newUserFields = document.querySelector("#loginNewUserFields");
@@ -102,20 +89,6 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
     }
   });
 
-  roleSelect?.addEventListener("change", (event) => {
-    const value = event.target.value;
-    if (value === "client") {
-      companyField.hidden = false;
-      certificationField.hidden = true;
-    } else if (value === "operator") {
-      companyField.hidden = true;
-      certificationField.hidden = false;
-    } else {
-      companyField.hidden = false;
-      certificationField.hidden = true;
-    }
-  });
-
   document.querySelector("#loginForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -124,7 +97,6 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
     const email = safeTrim(data.get("email")).toLowerCase();
     const role = data.get("role");
     const company = safeTrim(data.get("company"));
-    const certification = safeTrim(data.get("certification"));
     const password = safeTrim(data.get("password"));
 
     if (!email) {
@@ -156,7 +128,7 @@ export function renderLogin(app, { state, saveState, onLogin, feedback = null })
       submitBtn.disabled = true;
       const authResponse = existingUser
         ? await loginWithPassword({ email, password })
-        : await registerWithPassword({ email, name, role, company, certification, password });
+        : await registerWithPassword({ email, name, role, company, password });
 
       const user = authResponse.user;
       const index = state.users.findIndex((item) => item.id === user.id);

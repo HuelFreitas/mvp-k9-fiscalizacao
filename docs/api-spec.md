@@ -190,15 +190,15 @@ Autorização e roles
 Exemplos de payloads e respostas enviadas acima.
 
 Observações para desenvolvimento rápido
-- Start com Node + Express + Prisma + Postgres (ou SQLite para dev)
+- Persistência implementada com Node + Express + PostgreSQL, configurada por `DATABASE_URL`.
 - Storage: Minio local para teste de S3 ou usar DigitalOcean Spaces
 - Auth: JWT com secret env var; para produção, usar refresh tokens e expirations curtas
 
 Próximos passos sugeridos (curto prazo)
-1. Scaffold backend mínimo com `express` e `prisma` (SQLite) e endpoint `POST /api/auth/login` + `POST /api/requests`
-2. Implementar requests CRUD e persistência
-3. Implementar upload com presigned URLs
-4. Substituir chamadas frontend da service layer para apontar ao backend
+1. Implementar upload com presigned URLs
+2. Adicionar refresh tokens e revogação de sessão
+3. Normalizar timeline e relatórios em tabelas próprias quando o volume justificar
+4. Adicionar paginação e filtros no banco
 
 ## Como usar no protótipo atual
 

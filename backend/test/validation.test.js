@@ -27,6 +27,9 @@ describe('validation schemas', () => {
 
     const bad = validateRegisterPayload({ email: 'u@x.com', name: 'User', role: 'wrong', password: '123456' });
     expect(bad.success).toBe(false);
+
+    const privileged = validateRegisterPayload({ email: 'admin@x.com', name: 'Admin', role: 'admin', password: '123456' });
+    expect(privileged.success).toBe(false);
   });
 
   it('valida create/update request payload', () => {
@@ -45,6 +48,9 @@ describe('validation schemas', () => {
 
     const updateBad = validateUpdateRequestPayload({});
     expect(updateBad.success).toBe(false);
+
+    const sensitiveUpdate = validateUpdateRequestPayload({ status: 'completed', clientId: 'outro' });
+    expect(sensitiveUpdate.success).toBe(false);
   });
 
   it('valida status/progress/report', () => {

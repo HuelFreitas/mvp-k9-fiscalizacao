@@ -30,6 +30,26 @@ describe('API backend', () => {
     expect(loginRes.body.token).toBeTypeOf('string');
   });
 
+  it('não permite cadastro público com perfil privilegiado', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'admin@empresa.com',
+      name: 'Admin indevido',
+      role: 'admin',
+      password: '123456',
+    });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('INVALID_PAYLOAD');
+  });
+
+  it('expõe health check e cabeçalhos de segurança', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
+
   it('bloqueia /api/requests sem token', async () => {
     const res = await request(app).get('/api/requests');
     expect(res.status).toBe(401);

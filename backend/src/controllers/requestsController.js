@@ -6,6 +6,13 @@ import {
   validateProgressPayload,
   validateReportPayload,
 } from '../validation/schemas.js';
+import {
+  deleteRequestById,
+  findRequestById,
+  insertRequest,
+  listRequestRecords,
+  saveRequest,
+} from '../db/repository.js';
 
 function isClient(user) {
   return user?.role === 'client';
@@ -14,59 +21,73 @@ function isClient(user) {
 function canAccessRequest(user, requestItem) {
   if (!requestItem) return false;
   if (!user) return false;
-  if (user.role === 'admin' || user.role === 'operator') return true;
+  if (user.role === 'admin') return true;
+  if (user.role === 'operator') {
+    return requestItem.assignedOperatorId === null || requestItem.assignedOperatorId === user.id;
+  }
   if (isClient(user)) return requestItem.clientId === user.id;
   return false;
 }
 
-export function listRequestsHandler(req, res) {
-  const allItems = global.appState.requests || [];
+export async function listRequestsHandler(req, res) {
+  const allItems = await listRequestRecords();
   const items = isClient(req.user)
     ? allItems.filter((item) => item.clientId === req.user.id)
-    : allItems;
+    : req.user.role === 'operator'
+      ? allItems.filter((item) => item.assignedOperatorId === null || item.assignedOperatorId === req.user.id)
+      : allItems;
   return res.json({ items, total: items.length });
 }
 
-export function createRequestHandler(req, res) {
+export async function createRequestHandler(req, res) {
   const parsed = validateCreateRequestPayload(req.body);
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
   const user = req.user || { id: 'client-local', role: 'client' };
   const reqPayload = buildRequestPayload(new Map(Object.entries(parsed.data)), user);
   const valid = validateRequestPayload(reqPayload);
   if (!valid.valid) return res.status(422).json({ error: { code: 'INVALID_REQUEST', message: valid.message } });
-  global.appState.requests.push(reqPayload);
-  return res.status(201).json({ request: reqPayload });
+  const created = await insertRequest(reqPayload);
+  return res.status(201).json({ request: created });
 }
 
-export function getRequestHandler(req, res) {
-  const item = (global.appState.requests || []).find((r) => r.id === req.params.id);
+export async function getRequestHandler(req, res) {
+  const item = await findRequestById(req.params.id);
   if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
   return res.json({ request: item });
 }
 
-export function updateRequestHandler(req, res) {
+export async function updateRequestHandler(req, res) {
   const parsed = validateUpdateRequestPayload(req.body);
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
-  const item = (global.appState.requests || []).find((r) => r.id === req.params.id);
+  const item = await findRequestById(req.params.id);
   if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
+  if (req.user.role === 'operator') {
+    return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Operadores não podem editar os dados da solicitação' } });
+  }
+  if (isClient(req.user) && item.status !== 'pending') {
+    return res.status(409).json({ error: { code: 'REQUEST_LOCKED', message: 'Apenas solicitações pendentes podem ser editadas' } });
+  }
   Object.assign(item, parsed.data);
   item.updatedAt = new Date().toISOString();
-  return res.json({ request: item });
+  return res.json({ request: await saveRequest(item) });
 }
 
-export function deleteRequestHandler(req, res) {
-  const items = global.appState.requests || [];
-  const index = items.findIndex((r) => r.id === req.params.id);
-  if (index < 0 || !canAccessRequest(req.user, items[index])) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
-  items.splice(index, 1);
+export async function deleteRequestHandler(req, res) {
+  const item = await findRequestById(req.params.id);
+  if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
+  if (isClient(req.user) && item.status !== 'pending') {
+    return res.status(409).json({ error: { code: 'REQUEST_LOCKED', message: 'Apenas solicitações pendentes podem ser excluídas' } });
+  }
+  await deleteRequestById(item.id);
   return res.status(204).send();
 }
 
-export function updateRequestStatusHandler(req, res) {
-  const item = (global.appState.requests || []).find((r) => r.id === req.params.id);
+export async function updateRequestStatusHandler(req, res) {
+  const item = await findRequestById(req.params.id);
   if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
   const parsed = validateStatusPayload(req.body);
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
+  if (req.user.role === 'operator' && item.assignedOperatorId === null) item.assignedOperatorId = req.user.id;
   const { status, notes } = parsed.data;
   item.status = status;
   item.updatedAt = new Date().toISOString();
@@ -80,14 +101,15 @@ export function updateRequestStatusHandler(req, res) {
   };
   item.timeline = Array.isArray(item.timeline) ? item.timeline : [];
   item.timeline.push(entry);
-  return res.json({ request: item, entry });
+  return res.json({ request: await saveRequest(item), entry });
 }
 
-export function addRequestProgressHandler(req, res) {
-  const item = (global.appState.requests || []).find((r) => r.id === req.params.id);
+export async function addRequestProgressHandler(req, res) {
+  const item = await findRequestById(req.params.id);
   if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
   const parsed = validateProgressPayload(req.body);
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
+  if (req.user.role === 'operator' && item.assignedOperatorId === null) item.assignedOperatorId = req.user.id;
   const { title, details, next } = parsed.data;
   const entry = {
     id: `event-${Date.now().toString(36)}`,
@@ -100,14 +122,15 @@ export function addRequestProgressHandler(req, res) {
   item.timeline = Array.isArray(item.timeline) ? item.timeline : [];
   item.timeline.push(entry);
   item.updatedAt = new Date().toISOString();
-  return res.status(201).json({ request: item, entry });
+  return res.status(201).json({ request: await saveRequest(item), entry });
 }
 
-export function submitRequestReportHandler(req, res) {
-  const item = (global.appState.requests || []).find((r) => r.id === req.params.id);
+export async function submitRequestReportHandler(req, res) {
+  const item = await findRequestById(req.params.id);
   if (!item || !canAccessRequest(req.user, item)) return res.status(404).json({ error: { code: 'NOT_FOUND' } });
   const parsed = validateReportPayload(req.body);
   if (!parsed.success) return res.status(422).json({ error: { code: 'INVALID_PAYLOAD', ...parsed.error } });
+  if (req.user.role === 'operator' && item.assignedOperatorId === null) item.assignedOperatorId = req.user.id;
   const { summary, findings, recommendations } = parsed.data;
   item.report = { summary, findings, recommendations, generatedAt: new Date().toISOString(), operatorId: req.user.id };
   item.status = 'completed';
@@ -122,5 +145,5 @@ export function submitRequestReportHandler(req, res) {
   };
   item.timeline = Array.isArray(item.timeline) ? item.timeline : [];
   item.timeline.push(entry);
-  return res.json({ request: item, entry });
+  return res.json({ request: await saveRequest(item), entry });
 }

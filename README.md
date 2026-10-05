@@ -5,7 +5,7 @@ Protótipo responsivo para gestão de operações de fiscalização marítima co
 - **Cliente**: registra solicitações, acompanha inspeções em andamento, envia mensagens complementares e gera relatórios concluídos.
 - **Operador**: recebe missões, atualiza status, adiciona checkpoints de campo e emite relatório final para liberação ao cliente.
 
-> ⚠️ O protótipo possui frontend + backend Node.js/Express local. Login e rotas de solicitações operam via API em `/api`. Dados de sessão continuam no `localStorage`.
+> ⚠️ O projeto possui frontend Vite e API Node.js/Express. Em produção, usuários e solicitações são persistidos em PostgreSQL; apenas o token da sessão permanece no `localStorage`.
 
 ## Pré-requisitos
 
@@ -64,7 +64,7 @@ npm run coverage
 
 ### Métricas atuais
 
-- **191 testes** implementados e passando (100%) ✅
+- **191 testes de frontend** e **37 testes de backend** passando (100%) ✅
 - **Thresholds configurados (frontend):** 70% statements/lines/functions e 65% branches (aplicados a `src/**/*.js`)
 - **Threshold backend:** execução com cobertura habilitada em `backend` para monitoramento contínuo
 
@@ -196,7 +196,7 @@ Configurado para rodar **automaticamente em cada pull request**:
 │       ├── storage.js       # Leitura/escrita no localStorage
 │       ├── string.js        # Sanitização e trim seguro
 │       └── validators.js    # Validações de data e formulário
-├── test/                   # 191 testes unitários (Vitest + jsdom)
+├── test/                   # 191 testes unitários de frontend (Vitest + jsdom)
 ├── index.html              # Shell da aplicação
 └── vite.config.js          # Configuração do bundler
 ```
@@ -218,17 +218,34 @@ npm run dev
 3. Acesse a URL do Vite e faça login/cadastro normalmente.
 4. Opcional (hot reload no backend): se instalar `nodemon`, use `npm run dev` na pasta `backend`.
 
+Sem `DATABASE_URL`, o backend usa dados demonstrativos em memória para facilitar o desenvolvimento. Em produção, `DATABASE_URL` é obrigatória. Para testar com PostgreSQL local ou Neon, configure `backend/.env` e execute `npm run migrate && npm run seed` antes de iniciar a API.
+
+### Configuração e segurança
+
+Copie `backend/.env.example` para `backend/.env` e substitua os valores de demonstração antes de publicar a aplicação.
+
+- `JWT_SECRET`: segredo longo e aleatório; obrigatório em produção.
+- `CORS_ORIGINS`: origens permitidas, separadas por vírgula.
+- `DEMO_DEFAULT_PASSWORD`: senha dos usuários demonstrativos.
+- `ALLOW_DEV_PASSWORDLESS_LOGIN`: mantenha `false`; nunca é aceito em produção.
+
+O cadastro público cria exclusivamente clientes. Operadores visualizam apenas operações livres ou atribuídas a eles, enquanto clientes só podem editar ou excluir solicitações próprias que ainda estejam pendentes. Campos internos, como status, cliente, operador, timeline e relatório, não podem ser alterados pelo endpoint genérico de edição.
+
+A API também disponibiliza `GET /api/health`, limita requisições de autenticação, restringe o tamanho dos payloads e envia cabeçalhos HTTP de segurança.
+
+Para publicar gratuitamente o frontend, a API e o PostgreSQL, siga o guia [Render + Neon](./docs/deploy-render-neon.md). O arquivo `render.yaml` descreve os dois serviços do Render, e as migrations em `backend/migrations/` preparam o banco automaticamente.
+
 ### Usuários demo
 
 - Cliente: `marina@portosafemar.com`
 - Operador: `carlos.silva@guardcan.com`
-- Senha padrão: `123456` (ou valor definido em `DEMO_DEFAULT_PASSWORD`)
+- Senha local padrão: `123456`. No deploy, use a senha forte definida em `DEMO_DEFAULT_PASSWORD`.
 
 ## Próximos passos sugeridos
 
-- Integrar API real para autenticação e persistência dos dados.
 - Adicionar assinatura digital aos relatórios exportados.
 - Implementar fluxo de notificações por e-mail ou push.
+- Armazenar evidências em Cloudflare R2 ou Supabase Storage.
 - Aumentar cobertura dos componentes com menor cobertura (`dashboards`, `modal`, `search`, `client`).
 
 ## 🤝 Contribuindo
@@ -248,7 +265,7 @@ Para contribuir com o projeto:
 
 - ✅ Lint frontend: `npm run lint`
 - ✅ Lint backend: `cd backend && npm run lint`
-- ✅ Testes passando: `npm test` (191/191)
+- ✅ Testes passando: `npm test` (frontend) e `cd backend && npm test` (backend)
 - ✅ Cobertura mantida: `npm run test:coverage`
 - ✅ Nova funcionalidade tem testes
 - ✅ Documentação atualizada
