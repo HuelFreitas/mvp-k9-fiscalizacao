@@ -91,7 +91,8 @@ function renderCurrentOperatorDashboard(user) {
     requests: operatorRequests,
     buildOperatorMetrics,
     metricCard,
-    buildOperatorBoard,
+    buildOperatorBoard: (requests, viewer) =>
+      buildOperatorBoard(requests, viewer, { resolveUser: resolveUserWrapper }),
     emptyState,
     app,
     attachRequestModalHandlers: (u) => attachModalHandlersFn(app, u, {

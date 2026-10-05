@@ -53,6 +53,27 @@ describe('dashboard components', () => {
       const result = buildOperatorBoard(requests, viewer);
       expect(result).toBeDefined();
     });
+
+    it('exibe o nome do cliente associado à solicitação', () => {
+      const requests = [
+        {
+          id: 'r1',
+          title: 'Varredura',
+          status: 'pending',
+          port: 'Santos',
+          vessel: 'MSC',
+          scheduledFor: '2026-10-05T08:00:00',
+          clientId: 'client-1',
+        },
+      ];
+      const resolveUser = vi.fn(() => ({ id: 'client-1', name: 'Marina Porto' }));
+
+      const result = buildOperatorBoard(requests, { id: 'operator-1' }, { resolveUser });
+
+      expect(resolveUser).toHaveBeenCalledWith('client-1');
+      expect(result).toContain('<strong>Cliente:</strong> Marina Porto');
+      expect(result).not.toContain('<strong>Cliente:</strong> Usuário');
+    });
   });
 
   describe('renderClientDashboard', () => {
