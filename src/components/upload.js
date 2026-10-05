@@ -132,8 +132,8 @@ export function renderEvidenceGallery(evidenceList, gallery, requestId, helpers)
             <div>${fileSize} • ${helpers.formatDate(evidence.uploadedAt)}</div>
           </div>
           <div class="evidence-actions">
-            <button class="evidence-action" data-action="view" title="Abrir arquivo">👁️</button>
-            <button class="evidence-action danger" data-action="remove" title="Remover">🗑️</button>
+            <button class="evidence-action" type="button" data-action="view" title="Abrir arquivo" aria-label="Abrir ${helpers.escapeHtml(evidence.name)}">👁️</button>
+            <button class="evidence-action danger" type="button" data-action="remove" title="Remover" aria-label="Remover ${helpers.escapeHtml(evidence.name)}">🗑️</button>
           </div>
         </div>
       `;
